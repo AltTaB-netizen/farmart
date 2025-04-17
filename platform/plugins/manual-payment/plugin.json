@@ -1,0 +1,10 @@
+{
+    "id": "manual-payment",
+    "name": "Manual Payment",
+    "description": "Manual credit card processing plugin",
+    "author": "Vaatse",
+    "namespace": "Botble\\ManualPayment\\",
+    "provider": "Botble\\ManualPayment\\Providers\\ManualPaymentServiceProvider",
+    "version": "1.0.0",
+    "minimum_core_version": "7.3.0"
+}
