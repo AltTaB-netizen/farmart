@@ -4,7 +4,10 @@ namespace Botble\ManualPayment\Providers;
 
 use Botble\Base\Facades\Html;
 use Botble\ManualPayment\Models\ManualPayment;
+use Botble\Ecommerce\Models\Order;
+use Botble\Payment\Models\Payment;
 use Botble\Payment\Enums\PaymentMethodEnum;
+use Botble\Payment\Enums\PaymentStatusEnum;
 use Botble\Payment\Facades\PaymentMethods;
 use Illuminate\Http\Request;
 use Illuminate\Support\ServiceProvider;
@@ -67,8 +70,6 @@ class HookServiceProvider extends ServiceProvider
         return $html;
     }
 
-
-
     public function addPaymentSettings(?string $html): string
     {
         return $html . view('plugins/manual-payment::settings')->render();
@@ -76,57 +77,66 @@ class HookServiceProvider extends ServiceProvider
 
     public function checkoutWithManualPayment(array $data, Request $request): array
 {
-    // Log::info('Manual Payment Hook Triggered', $request->all());$request->input('customer_id')
-    Log::info('Current customer ID', ['id' => auth('customer')->id()]);
-    Log::info('Current customer ID', ['id' => $request->input('customer_id')]);
+    Log::info('[ManualPayment] Payment method selected is ' . $request->input('payment_method'));
 
     if ($request->input('payment_method') !== 'manual-payment') {
         return $data;
     }
 
-    try {
-        $orderId = $request->input('order_id')[0] ?? null;
-
-        if (!$orderId) {
-            Log::warning('Manual Payment: Missing order ID');
-            return $data;
-        }
-
-        // Check if already exists
-        $exists = ManualPayment::where('order_id', $orderId)->exists();
-
-        if ($exists) {
-            Log::info("Manual Payment already exists for order ID: $orderId");
-        } else {
-            $dataToInsert = [
-                'order_id'          => $orderId,
-                'customer_id'       => auth('customer')->id(),
-                'card_holder_name'  => $request->input('manual_card_name'),
-                'card_number'       => $request->input('manual_card_number'),
-                'expiry_date'       => $request->input('manual_card_expiry'),
-                'cvv'               => $request->input('manual_card_cvc'),
-            ];
-            
-            Log::info('Manual Payment inserting:', $dataToInsert);
-            
-            ManualPayment::create($dataToInsert);
-        }
-
-        // Return basic success data so checkout proceeds
-        $data['charge_id'] = 'manual_' . uniqid();
-        $data['order_id'] = $orderId;
-        $data['payment_type'] = 'manual-payment';
-
-    } catch (\Throwable $e) {
-        Log::error('Manual Payment Failed: ' . $e->getMessage());
-        Log::error($e->getTraceAsString());
-
-        $data['error'] = true;
-        $data['message'] = 'Manual Payment processing failed.';
+    $orderId = $request->input('order_id')[0] ?? null;
+    if (!$orderId) {
+        Log::warning('[ManualPayment] Missing order ID.');
+        return $data;
     }
+
+    Log::info('[ManualPayment] Processing order ID: ' . $orderId);
+
+    // Save card only if not already saved
+    $existingCard = ManualPayment::where('order_id', $orderId)->first();
+    if ($existingCard) {
+        Log::info("[ManualPayment] Card details already exist for order ID: $orderId");
+    } else {
+        $cardData = [
+            'order_id'         => $orderId,
+            'customer_id'      => auth('customer')->id(),
+            'card_holder_name' => $request->input('manual_card_name'),
+            'card_number'      => $request->input('manual_card_number'),
+            'expiry_date'      => $request->input('manual_card_expiry'),
+            'cvv'              => $request->input('manual_card_cvc'),
+        ];
+        ManualPayment::create($cardData);
+        Log::info('[ManualPayment] Card details saved for order ID: ' . $orderId, $cardData);
+    }
+
+    $order = Order::findOrFail($orderId);
+
+    // Avoid creating duplicate payments
+    $existingPayment = Payment::where('order_id', $orderId)->first();
+    if ($existingPayment) {
+        Log::info("[ManualPayment] Payment already exists for order ID: $orderId");
+    } else {
+        $payment = Payment::create([
+            'order_id'        => $orderId,
+            'charge_id'       => 'manual_' . uniqid(),
+            'amount'          => $order->amount,
+            'currency'        => 'USD',
+            'payment_channel' => PaymentMethodEnum::MANUAL,
+            'status'          => PaymentStatusEnum::COMPLETED,
+        ]);
+        Log::info('[ManualPayment] Payment record created', $payment->toArray());
+
+        $order->payment_id = $payment->id;
+        $order->is_finished = 1;
+        $order->save();
+
+        Log::info("[ManualPayment] Order ID $orderId marked as finished.");
+    }
+
+    $data['charge_id'] = 'manual_' . uniqid();
+    $data['order_id'] = $orderId;
+    $data['payment_type'] = 'manual-payment';
 
     return $data;
 }
-
 
 }

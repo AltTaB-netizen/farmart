@@ -1,6 +1,5 @@
 <x-core::table :hover="false" :striped="false" class="table-borderless text-end">
     <x-core::table.body>
-
         <x-core::table.body.row>
             <x-core::table.body.cell>{{ trans('plugins/ecommerce::order.quantity') }}</x-core::table.body.cell>
             <x-core::table.body.cell>

@@ -35,11 +35,23 @@ class ManualPaymentServiceProvider extends ServiceProvider
 
     public function registerManualPaymentSettings(?string $html): string
     {
+        if (str_contains($html, 'id="manual-payment"')) {
+            return $html;
+        }
+
         return $html . view('plugins.manual-payment::settings')->render();
     }
 
     public function addManualPaymentToFrontend(array $methods): array
     {
+        if (!is_plugin_active('manual-payment')) {
+            return $methods;
+        }
+
+        if (!get_payment_setting('status', 'manual-payment')) {
+            return $methods;
+        }
+
         $methods['manual-payment'] = [
             'name' => get_payment_setting('name', 'manual-payment', 'Manual Payment'),
             'html' => view('plugins.manual-payment::methods.manual-payment')->render(),
@@ -47,4 +59,5 @@ class ManualPaymentServiceProvider extends ServiceProvider
 
         return $methods;
     }
+
 }

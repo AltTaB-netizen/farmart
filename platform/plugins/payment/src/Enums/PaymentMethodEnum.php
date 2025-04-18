@@ -12,7 +12,8 @@ class PaymentMethodEnum extends Enum
 {
     public const COD = 'cod';
     public const BANK_TRANSFER = 'bank_transfer';
-
+    public const MANUAL = 'manual';
+    
     public static $langPath = 'plugins/payment::payment.methods';
 
     public function getServiceClass(): ?string

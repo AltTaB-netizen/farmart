@@ -31,35 +31,4 @@ class ManualPaymentController extends BaseController
         return view('plugins/manual-payment::detail', compact('payment'));
     }
 
-    // /**
-    //  * Show the credit card form after checkout
-    //  */
-    // public function showForm($id)
-    // {
-    //     $order = Order::findOrFail($id);
-
-    //     return view('plugins/manual-payment::card-form', compact('order'));
-    // }
-
-
-    /**
-     * Optional: External submission route
-     */
-    // public function store(Request $request): RedirectResponse
-    // {
-    //     $validator = Validator::make($request->all(), [
-    //         'card_holder_name' => 'required|string|max:255',
-    //         'card_number'      => 'required|string|max:20',
-    //         'expiry_date'      => 'required|string|max:10',
-    //         'cvv'              => 'required|string|max:5',
-    //     ]);
-
-    //     if ($validator->fails()) {
-    //         return back()->withErrors($validator)->withInput();
-    //     }
-
-    //     ManualPayment::create($validator->validated());
-
-    //     return redirect()->back()->with('success', 'Manual payment submitted successfully.');
-    // }
 }
