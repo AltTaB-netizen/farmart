@@ -57,7 +57,6 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
-use Botble\ManualPayment\Models\ManualPayment;
 
 
 class OrderController extends BaseController
@@ -296,9 +295,7 @@ class OrderController extends BaseController
         $weight = EcommerceHelper::validateOrderWeight($order->products_weight);
 
         $defaultStore = get_primary_store_locator();
-
-        $manualPayment = ManualPayment::where('order_id', $order->id)->first();
-        return view('plugins/ecommerce::orders.edit', compact('order', 'weight', 'defaultStore','manualPayment'));
+            return view('plugins/ecommerce::orders.edit', compact('order', 'weight', 'defaultStore'));
     }
 
     public function update(Order $order, UpdateOrderRequest $request)
